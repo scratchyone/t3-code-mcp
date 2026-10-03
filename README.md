@@ -35,11 +35,13 @@ Threads created by ChatGPT are titled `[ChatGPT] ...` and every message it sends
 
 1. Copy `config.example.json` to `config.json` and list your T3 machines.
 2. Run `node test/call.mjs list_threads '{"limit":3}'` to check that it can talk to T3.
-3. Create a tunnel in OpenAI's Secure MCP Tunnel and copy its runtime key.
-4. Set that key as the `CONTROL_PLANE_API_KEY` environment variable.
-5. Run `./set-tunnel tunnel_<id>` to configure the server to use your tunnel.
-6. Run `tunnel/run.sh`. This starts OpenAI's tunnel-client, which launches the server.
-7. In ChatGPT, add a connector. Enter your tunnel ID (`tunnel_<id>`) in the text field. The connector uses no authentication - the tunnel is private to your workspace.
+3. In the OpenAI Platform, go to Organization settings → Tunnels and create a tunnel.
+4. Separately, go to Organization settings → API keys and create a restricted API key with the Tunnels permissions Read and Use - this is the runtime key.
+5. Install OpenAI's tunnel-client. On macOS: `brew install openai/tools/tunnel-client`.
+6. Set the runtime key as the `CONTROL_PLANE_API_KEY` environment variable.
+7. Run `./set-tunnel tunnel_<id>` to configure the server to use your tunnel.
+8. Run `tunnel/run.sh`. This starts OpenAI's tunnel-client, which launches the server.
+9. In ChatGPT, add a connector. Enter your tunnel ID (`tunnel_<id>`) in the text field. The connector uses no authentication - the tunnel is private to your workspace.
 
 ## Notifications
 
