@@ -12,7 +12,7 @@ import fs from "node:fs";
 import readline from "node:readline";
 import { randomUUID } from "node:crypto";
 import { Machine } from "./t3client.mjs";
-import { isSubagent, projectMatches, threadState, trunc, textChunk, shapeMessages, DEFAULT_MESSAGE_CHARS, MAX_CHUNK_CHARS } from "./threads.mjs";
+import { isSubagent, projectMatches, threadState, trunc, textChunk, shapeMessages, DEFAULT_MESSAGE_CHARS, MAX_CHUNK_CHARS, activeRun, shouldQueue, isSteerRejection, deliveryOutcome, pendingRequests, liveState } from "./threads.mjs";
 import { EventHub, RpcError } from "./events.mjs";
 
 const config = JSON.parse(fs.readFileSync(process.env.T3_MCP_CONFIG || new URL("./config.json", import.meta.url), "utf8"));
@@ -213,7 +213,7 @@ const TOOLS = [
     name: "send_message",
     title: "Message a T3 thread",
     description:
-      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn; if it's running, mode auto lets T3 steer or queue as the provider supports, queue waits for the current turn.",
+      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn. If it's running, mode auto steers the message into the running turn when the provider supports it (Claude, Codex) and queues it otherwise; queue always waits for the current turn. If the thread is waiting on an approval or question, a steered message makes T3 cancel it (the agent gets the message instead of an answer); use mode queue to leave it pending. The result's delivery field says what actually happened: started, steered, queued, restarted, or unconfirmed.",
     inputSchema: {
       type: "object",
       properties: {
@@ -402,33 +402,81 @@ async function createThread(args = {}) {
   };
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function sendMessage(args = {}) {
   if (typeof args.thread_id !== "string" || !args.thread_id) throw new UserError("thread_id is required.");
   if (typeof args.message !== "string" || !args.message.trim()) throw new UserError("message is required.");
   const { m, t } = await findThread(args.thread_id, args.machine);
-  const queue = args.mode === "queue";
-  const before = threadState(t);
-  const result = await m.rpc("orchestration.dispatchCommand", {
-    type: "message.dispatch",
-    commandId: randomUUID(),
-    createdBy: "user", // T3 forces this for WebSocket clients anyway
-    creationSource: "mcp",
-    threadId: t.id,
-    messageId: randomUUID(),
-    text: marked(args.message),
-    attachments: [],
-    ...(queue ? {} : { deliveryIntent: "auto" }),
-    dispatchMode: queue ? { type: "queue_after_active" } : { type: "start_immediately" },
-  });
+  // Live state, not the cached shell: decides queue vs auto and lets us tell steer from queue afterwards.
+  const before = await m.getThread(t.id).then((s) => s.projection).catch(() => null);
+  const previousRunId = activeRun(before)?.id;
+  const text = marked(args.message);
+
+  const dispatch = (queue) => {
+    const messageId = randomUUID();
+    const sent = m.rpc("orchestration.dispatchCommand", {
+      type: "message.dispatch",
+      commandId: randomUUID(),
+      createdBy: "user", // T3 forces this for WebSocket clients anyway
+      creationSource: "mcp",
+      threadId: t.id,
+      messageId,
+      text,
+      attachments: [],
+      ...(queue ? {} : { deliveryIntent: "auto" }),
+      dispatchMode: queue ? { type: "queue_after_active" } : { type: "start_immediately" },
+    }, 30_000);
+    return { messageId, sent };
+  };
+
+  let queue = shouldQueue(args.mode, before);
+  let attempt = dispatch(queue);
+  let fellBack = false;
+  try {
+    await attempt.sent;
+  } catch (e) {
+    // A steer that T3 rejects (the turn paused or ended under us) wrote nothing; send it queued instead.
+    if (queue || !isSteerRejection(e)) {
+      // A timeout may still have landed; look before reporting failure, and never resend blindly.
+      if (!/timed out|closed during/.test(e.message)) throw e;
+    } else {
+      log(`send_message: steer rejected (${e.message}); retrying as queued`);
+      queue = true;
+      fellBack = true;
+      attempt = dispatch(true);
+      await attempt.sent;
+    }
+  }
   m.invalidateShell();
+
+  // Read back what T3 did. Bounded: ~4 s, then report it as unconfirmed rather than hang.
+  let outcome = null;
+  for (let i = 0; i < 8 && !outcome; i++) {
+    if (i) await sleep(500);
+    const after = (await m.getThread(t.id).catch(() => null))?.projection;
+    outcome = deliveryOutcome(after, attempt.messageId, previousRunId);
+  }
+  // Steering into a turn that's waiting on an approval or question makes T3 cancel it (seen every time in
+  // testing, though it can take a while to show), so say so rather than leave it as a surprise.
+  const pending = outcome?.delivery === "steered" ? pendingRequests(before).map((r) => r.kind) : [];
+  const note = fellBack
+    ? "The running turn couldn't take a steered message, so it was queued instead."
+    : pending.length
+      ? `The thread was waiting on you (${pending.join(", ")}). A steered message makes T3 cancel that, so the agent gets this message instead of an answer.`
+      : undefined;
   return {
     sent: true,
     machine: m.name,
     thread_id: t.id,
     title: t.title,
-    thread_was: before,
-    delivery: queue ? "queued after the current turn" : before === "running" ? "steered or queued (T3 decides)" : "started a new turn",
-    sequence: result?.sequence,
+    thread_was: liveState(before, t),
+    message_id: attempt.messageId,
+    ...(outcome || {
+      delivery: "unconfirmed",
+      detail: "T3 accepted the message but it didn't show in the thread within a few seconds; check with read_thread.",
+    }),
+    ...(note ? { note } : {}),
   };
 }
 
