@@ -75,7 +75,7 @@ export async function safePost(rawUrl, headers, body, timeoutMs = 10_000) {
     try { records = await dns.lookup(url.hostname, { all: true, verbatim: true }); } catch (e) { throw new DeliveryError("connection_refused", `DNS ${e.code}`); }
     const blocked = records.filter((r) => !isPublicAddress(r.address)).map((r) => r.address);
     if (!records.length || blocked.length) throw new DeliveryError("connection_refused", `non-public address ${blocked.join(",") || "none"}`);
-    // Prefer IPv4: this Mac has no IPv6 route.
+    // Prefer IPv4: some hosts have no working IPv6 route.
     ({ address, family } = records.find((r) => r.family === 4) ?? records[0]);
   }
 
