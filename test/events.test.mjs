@@ -247,15 +247,15 @@ test("server: discover + events only when enabled; legacy initialize and tools u
   assert.deepEqual(on.get(1).result.capabilities.events, {});
   assert.equal(on.get(1).result.resultType, "complete");
   assert.equal(on.get(2).result.events[0].name, EVENT_NAME);
-  assert.equal(on.get(3).result.tools.length, 6);
+  assert.equal(on.get(3).result.tools.length, 8);
   assert.equal(on.get(4).result.capabilities.events, undefined);
-  assert.equal(on.get(5).result.tools.length, 6);
+  assert.equal(on.get(5).result.tools.length, 8);
   assert.equal(on.get(5).result.resultType, undefined);
   assert.equal(on.get(6).error.code, -32022);
 
   const off = await rpc(false, msgs);
   assert.equal(off.get(1).error.code, -32601, "discover stays unanswered when disabled (today's behaviour)");
   assert.equal(off.get(2).error.code, -32601);
-  assert.equal(off.get(3).result.tools.length, 6);
+  assert.equal(off.get(3).result.tools.length, 8);
   assert.equal(off.get(3).result.resultType, undefined);
 });

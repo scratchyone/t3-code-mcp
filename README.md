@@ -14,6 +14,7 @@ Once connected, ChatGPT gets six tools:
 - `read_thread` - read a thread's status, any approvals or questions waiting on you, and its most recent messages. Long messages are delivered in chunks, with a note when there's more to fetch.
 - `create_thread` - start a new thread with a prompt
 - `send_message` - send a follow-up message to an existing thread
+- `settle_thread` / `unsettle_thread` - file a finished thread under Settled, or bring it back (T3 refuses to settle a thread that's still working)
 
 A single instance of this server can talk to every T3 Code machine in its config. Every result tells you which machine it came from, and if one machine is offline the others continue to respond.
 
