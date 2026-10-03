@@ -26,6 +26,7 @@ test("T3's steer rejections are recognised; unrelated errors are not", () => {
     "desktop: No running providerInstanceId turn found for active run run:x.",
     "desktop: Provider thread p has no active provider session for steering.",
     "desktop: claudeAgent cannot satisfy message dispatch mode steer_active for command c.",
+    "desktop: cursor cannot satisfy interrupt_restart_steering for command c: providerInstanceId cannot steer active turns directly or by interrupt-and-restart",
   ]) assert.equal(isSteerRejection(new Error(m)), true, m);
   for (const m of ["desktop: couldn't get a WebSocket ticket (HTTP 401)", "desktop: orchestration.dispatchCommand timed out"]) {
     assert.equal(isSteerRejection(new Error(m)), false, m);

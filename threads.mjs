@@ -75,9 +75,10 @@ export function liveState(projection, shellThread) {
   return projection.runs?.at(-1)?.status ?? threadState(shellThread);
 }
 
-// Errors T3 raises when a steer can't land (turn ended or paused between our check and its lock). These are
-// raised before anything is written, so retrying the same message as queued can't duplicate it.
-const STEER_REJECTED = /cannot be steered|No running provider(?:InstanceId)? turn|no active provider session|is not the active turn|cannot satisfy (?:message dispatch mode steer_active|active_steering)|is not active\b/i;
+// Errors T3 raises when a steer can't land (the turn is still starting, or ended between our check and its
+// lock, or the provider can't steer at all). They're raised before anything is written, so retrying the same
+// message as queued can't duplicate it.
+const STEER_REJECTED = /cannot be steered|No running provider(?:InstanceId)? turn|no active provider session|is not the active turn|cannot satisfy (?:message dispatch mode (?:steer|restart)_active|active_steering|interrupt_restart_steering)|cannot steer active turns|is not active\b/i;
 export const isSteerRejection = (err) => STEER_REJECTED.test(err?.message || "");
 
 // What happened to messageId, from a thread snapshot. Returns null if it isn't visible yet.

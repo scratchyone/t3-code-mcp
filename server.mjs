@@ -213,14 +213,14 @@ const TOOLS = [
     name: "send_message",
     title: "Message a T3 thread",
     description:
-      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn. If it's running, mode auto steers the message into the running turn when the provider supports it (Claude, Codex) and queues it otherwise; queue always waits for the current turn. If the thread is waiting on an approval or question, a steered message makes T3 cancel it and the agent gets the message instead of an answer. With mode queue the message doesn't run until someone answers it in T3, which this server can't do. The result's delivery field says what actually happened: started, steered, queued, restarted, or unconfirmed.",
+      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn. If it's running, the message is steered into the running turn by default (Claude, Codex and OpenCode take it at their next step; providers that can't steer directly have the turn interrupted and restarted with it); it's queued instead only if the turn can't take it yet. If the thread is waiting on an approval or question, steering makes T3 cancel it and the agent gets the message instead of an answer; with mode queue the message doesn't run until someone answers it in T3, which this server can't do. The result's delivery field says what actually happened: started, steered, queued, restarted, or unconfirmed.",
     inputSchema: {
       type: "object",
       properties: {
         thread_id: { type: "string" },
         machine: { type: "string", description: "Optional; found automatically." },
         message: { type: "string" },
-        mode: { type: "string", enum: ["auto", "queue"], description: "Default auto." },
+        mode: { type: "string", enum: ["steer", "queue", "auto"], description: "Default steer: deliver into the running turn now. queue: wait for the current turn to finish. auto: let T3 choose (it queues for providers that can't steer directly). Use queue or auto only if the user asks." },
       },
       required: ["thread_id", "message"],
     },
@@ -424,7 +424,7 @@ async function sendMessage(args = {}) {
       messageId,
       text,
       attachments: [],
-      ...(queue ? {} : { deliveryIntent: "auto" }),
+      ...(queue ? {} : { deliveryIntent: args.mode === "auto" ? "auto" : "steer" }),
       dispatchMode: queue ? { type: "queue_after_active" } : { type: "start_immediately" },
     }, 30_000);
     return { messageId, sent };
