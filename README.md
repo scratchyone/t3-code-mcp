@@ -34,8 +34,11 @@ The token is stored in the macOS login keychain, or on other systems in `state/t
 3. Try it locally: `node test/call.mjs list_threads '{"limit":3}'`
 4. Create a tunnel and a runtime key in OpenAI's Secure MCP Tunnel, install tunnel-client, then run `./set-tunnel tunnel_<id>`. That writes `tunnel/t3.yaml` from `tunnel/t3.example.yaml`. Put the runtime key in `CONTROL_PLANE_API_KEY` or the macOS keychain (service `openai-tunnel-runtime-key`, account `t3-code-mcp`), and run `tunnel/run.sh`. On macOS you can keep it running with the launchd template in `tunnel/local.t3-mcp-tunnel.plist.example`.
 5. In ChatGPT, add a plugin/connector that uses the tunnel, with no authentication. The tunnel is private to your workspace.
+6. Turn on notifications (see below).
 
-## Notifications (optional)
+## Notifications (strongly recommended)
+
+I strongly recommend turning notifications on; in my opinion they're essential. Without them, ChatGPT only knows a thread finished if you think to ask it to check; with them, it gets woken up the moment a thread finishes, fails, or needs you. They're off by default only because enabling them switches the connector to a newer version of the MCP protocol.
 
 Implements OpenAI's MCP Events in webhook mode with one event, `t3.thread.status_changed`. It fires when a thread completes, fails, is interrupted or cancelled, or starts waiting on you (approval or question). Filters: `machine`, `project`, `thread_id`, `statuses`, `include_subagents`. The payload is short; ChatGPT calls `read_thread` for details.
 
