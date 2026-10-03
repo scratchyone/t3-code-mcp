@@ -19,7 +19,7 @@ A single instance of this server can talk to every T3 Code machine in its config
 
 ## How it works
 
-This project is a single Node.js process made up of a few files, with no dependencies. It needs Node 22 or newer.
+This project has no dependencies. It needs Node 22 or newer.
 
 It connects to your existing T3 Code installation using the same undocumented endpoints that T3 itself uses - there is no official public API, so a T3 update could break things. If that happens, the server will fail with a clear error message.
 
