@@ -17,7 +17,7 @@ It's a single Node.js process, no dependencies (Node 22+ for the built-in WebSoc
 
 Threads it creates are titled "[ChatGPT] ..." and every message it sends starts with "[From ChatGPT]" so they're easy to spot in T3. Both are configurable.
 
-New threads use the project's checkout and your usual model and runtime mode (project default, then T3 default, then your most recent thread).
+New threads run in the project's main checkout with T3's default runtime mode. ChatGPT can pick a model you've used recently on that machine and start in plan mode; otherwise it uses your usual model (project default, then T3 default, then your most recent thread).
 
 ## How auth works
 
