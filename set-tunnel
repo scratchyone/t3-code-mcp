@@ -1,0 +1,17 @@
+#!/bin/bash
+# Usage: ./set-tunnel tunnel_<32 chars>
+# Writes the tunnel ID into tunnel/t3.yaml (created from t3.example.yaml with this checkout's path on
+# first run) and (re)starts the launchd agent if it's installed.
+set -euo pipefail
+cd "$(dirname "$0")"
+[[ "${1:-}" =~ ^tunnel_[a-z0-9]{32}$ ]] || { echo "usage: $0 tunnel_<32 lowercase letters/digits>"; exit 1; }
+[ -f tunnel/t3.yaml ] || sed "s#/ABSOLUTE/PATH/TO/t3-code-mcp#$PWD#" tunnel/t3.example.yaml > tunnel/t3.yaml
+sed -i.bak -E "s/tunnel_[A-Za-z0-9_]+/$1/" tunnel/t3.yaml && rm -f tunnel/t3.yaml.bak
+PLIST=~/Library/LaunchAgents/local.t3-mcp-tunnel.plist
+if [ -f "$PLIST" ]; then
+  launchctl bootout gui/$(id -u)/local.t3-mcp-tunnel 2>/dev/null || true
+  launchctl bootstrap gui/$(id -u) "$PLIST"
+  echo "tunnel set to $1 and agent restarted; health: http://127.0.0.1:23442/readyz"
+else
+  echo "tunnel set to $1. Start it with: tunnel/run.sh (or install the launchd agent, see README)"
+fi

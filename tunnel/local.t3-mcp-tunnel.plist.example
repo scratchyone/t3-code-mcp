@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Copy to ~/Library/LaunchAgents/local.t3-mcp-tunnel.plist and replace /ABSOLUTE/PATH/TO. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>local.t3-mcp-tunnel</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/ABSOLUTE/PATH/TO/t3-code-mcp/tunnel/run.sh</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/ABSOLUTE/PATH/TO/t3-code-mcp</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<!-- launchd's PATH doesn't include Homebrew; node and tunnel-client must be on it. -->
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>StandardOutPath</key>
+	<string>/tmp/t3-mcp-tunnel.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/t3-mcp-tunnel.log</string>
+</dict>
+</plist>

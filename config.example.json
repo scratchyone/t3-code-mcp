@@ -1,0 +1,28 @@
+{
+  "ownerName": "Sam",
+  "sessionLabel": "ChatGPT MCP",
+  "titlePrefix": "[ChatGPT] ",
+  "messagePrefix": "[From ChatGPT]",
+  "machines": [
+    {
+      "name": "desktop",
+      "baseUrl": "http://127.0.0.1:3773",
+      "cli": [
+        "/Applications/T3 Code (Alpha).app/Contents/MacOS/T3 Code (Alpha)",
+        "/Applications/T3 Code (Alpha).app/Contents/Resources/app.asar/apps/server/dist/bin.mjs"
+      ],
+      "cliEnv": {
+        "ELECTRON_RUN_AS_NODE": "1"
+      }
+    },
+    {
+      "name": "laptop",
+      "baseUrl": "http://laptop.your-tailnet.ts.net:3773",
+      "cli": ["ssh", "-o", "BatchMode=yes", "laptop", "t3"]
+    }
+  ],
+  "events": {
+    "enabled": false,
+    "pollMs": 20000
+  }
+}
