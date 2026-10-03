@@ -55,3 +55,7 @@ Built against T3 Code 0.0.43-preview (orchestration protocol 2). It uses T3's HT
 - `node test/renew.mjs` forces a session renewal on every machine.
 
 Not affiliated with T3 Code or OpenAI.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
