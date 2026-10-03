@@ -213,7 +213,7 @@ const TOOLS = [
     name: "send_message",
     title: "Message a T3 thread",
     description:
-      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn. If it's running, mode auto steers the message into the running turn when the provider supports it (Claude, Codex) and queues it otherwise; queue always waits for the current turn. If the thread is waiting on an approval or question, a steered message makes T3 cancel it (the agent gets the message instead of an answer); use mode queue to leave it pending. The result's delivery field says what actually happened: started, steered, queued, restarted, or unconfirmed.",
+      "Send a message to an existing T3 thread (marked as coming from ChatGPT). If the thread is idle this starts a new turn. If it's running, mode auto steers the message into the running turn when the provider supports it (Claude, Codex) and queues it otherwise; queue always waits for the current turn. If the thread is waiting on an approval or question, a steered message makes T3 cancel it and the agent gets the message instead of an answer. With mode queue the message doesn't run until someone answers it in T3, which this server can't do. The result's delivery field says what actually happened: started, steered, queued, restarted, or unconfirmed.",
     inputSchema: {
       type: "object",
       properties: {
@@ -459,12 +459,14 @@ async function sendMessage(args = {}) {
   }
   // Steering into a turn that's waiting on an approval or question makes T3 cancel it (seen every time in
   // testing, though it can take a while to show), so say so rather than leave it as a surprise.
-  const pending = outcome?.delivery === "steered" ? pendingRequests(before).map((r) => r.kind) : [];
+  const pending = pendingRequests(before).map((r) => r.kind);
   const note = fellBack
     ? "The running turn couldn't take a steered message, so it was queued instead."
-    : pending.length
+    : pending.length && outcome?.delivery === "steered"
       ? `The thread was waiting on you (${pending.join(", ")}). A steered message makes T3 cancel that, so the agent gets this message instead of an answer.`
-      : undefined;
+      : pending.length && outcome?.delivery === "queued"
+        ? `The thread is waiting on you (${pending.join(", ")}), so this queued message won't run until that's answered in T3. This server can't answer it; tell the user it's waiting on them.`
+        : undefined;
   return {
     sent: true,
     machine: m.name,
